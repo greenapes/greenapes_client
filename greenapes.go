@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -36,8 +37,9 @@ func (self *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 type Error struct {
-	StatusCode int
-	//body       string
+	StatusCode  int
+	Description string
+	Details     map[string]interface{}
 }
 
 func (self *Error) Error() string {
@@ -47,7 +49,7 @@ func (self *Error) Error() string {
 	} else {
 		code = strconv.FormatInt(int64(self.StatusCode), 10)
 	}
-	return fmt.Sprintf("Greenapes error[%s]", code)
+	return fmt.Sprintf("Greenapes error[code=%s desc=%s]", code, self.Description)
 }
 
 func ExtractStatusCode(e error) int {
@@ -101,45 +103,99 @@ func (self *NetworkClient) fix_url(u string) string {
 	return u
 }
 
-func (self *NetworkClient) GetData(u string, v interface{}) error {
+func (self *NetworkClient) GetData(u string, response interface{}) error {
+	hresp, err := self.sendRequest("GET", u, nil)
+	if err == nil {
+		err = self.decodeResponse(hresp, response)
+	}
+	return err
+}
+
+func (self *NetworkClient) PostData(u string, body interface{}, response interface{}) error {
+	hresp, err := self.sendRequest("POST", u, body)
+	if err == nil {
+		err = self.decodeResponse(hresp, response)
+	}
+	return err
+}
+
+func (self *NetworkClient) PutData(u string, body interface{}, response interface{}) error {
+	hresp, err := self.sendRequest("PUT", u, body)
+	if err == nil {
+		err = self.decodeResponse(hresp, response)
+	}
+	return err
+}
+
+func (self *NetworkClient) sendRequest(method, u string, body interface{}) (*http.Response, error) {
 	u = self.fix_url(u)
-	resp, err := self.Get(u)
-	if err != nil {
-		return err
+	var payload io.Reader
+	if body != nil {
+		octets, err := json.Marshal(body)
+		if err != nil {
+			return nil, err
+		}
+		payload = bytes.NewReader(octets)
 	}
+
+	req, err := http.NewRequest(method, u, payload)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("content-type", "application/javascript")
+	return self.Do(req)
+}
+
+func (self *NetworkClient) decodeResponse(resp *http.Response, decoded interface{}) error {
 	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return &Error{resp.StatusCode}
-	}
-
-	bytes, err := ioutil.ReadAll(resp.Body)
+	err := self.decodeError(resp)
 	if err != nil {
 		return err
 	}
 
-	err = json.Unmarshal(bytes, v)
-	if err != nil {
-		return err
+	if decoded != nil {
+		bytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+
+		err = json.Unmarshal(bytes, decoded)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func (self *NetworkClient) PostData(u string, v interface{}) error {
-	u = self.fix_url(u)
-	octets, err := json.Marshal(v)
+func (self *NetworkClient) decodeError(resp *http.Response) error {
+	if resp.StatusCode < 400 {
+		return nil
+	}
+	out := &Error{resp.StatusCode, "", nil}
+
+	bytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return out
 	}
-	resp, err := self.Post(u, "application/javascript", bytes.NewReader(octets))
+
+	var raw struct {
+		Error map[string]interface{}
+	}
+
+	err = json.Unmarshal(bytes, &raw)
 	if err != nil {
-		return err
+		return out
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 300 {
-		return &Error{resp.StatusCode}
+
+	if raw.Error != nil {
+		d, ok := raw.Error["description"]
+		if ok {
+			out.Description = d.(string)
+			delete(raw.Error, "description")
+		}
+		out.Details = raw.Error
 	}
-	return nil
+	return out
 }
 
 func (self *NetworkClient) Delete(u string) error {
@@ -150,7 +206,9 @@ func (self *NetworkClient) Delete(u string) error {
 	}
 	resp, err := self.Do(req)
 	if resp.StatusCode >= 300 {
-		return &Error{resp.StatusCode}
+		return &Error{
+			StatusCode: resp.StatusCode,
+		}
 	}
 	return nil
 }
