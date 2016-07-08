@@ -61,6 +61,31 @@ func ExtractStatusCode(e error) int {
 	}
 }
 
+type LoginRequest struct {
+	Timezone string `json:"timezone"`
+	Language string `json:"language"`
+}
+
+type SmsLoginFirstRequest struct {
+	LoginRequest
+	Telephone string `json:"telephone"`
+}
+
+type SmsLoginSecondRequest struct {
+	LoginRequest
+	Telephone string `json:"telephone"`
+	Code      string `json:"code"`
+}
+
+type LoginResponse struct {
+	UserToken string `json:"user-token"`
+	Username  string
+	Timezone  string
+	Language  string
+	Profiles  []string
+	Created   bool
+}
+
 type ApiServer struct {
 	remote_url string
 	app_id     string
@@ -91,6 +116,25 @@ func (self *ApiServer) AnonymousClient() *NetworkClient {
 	return self.Client("")
 }
 
+func (self *ApiServer) SmsLoginStep1(req SmsLoginFirstRequest) error {
+	var resp interface{}
+
+	client := self.AnonymousClient()
+	code, err := client.PostData("/v1/apes/login", req, &resp)
+	if err == nil && code != 202 {
+		err = fmt.Errorf("invalid status code. received=%v expected=202", code)
+	}
+	return err
+}
+
+func (self *ApiServer) SmsLoginStep2(req SmsLoginSecondRequest) (LoginResponse, error) {
+	resp := LoginResponse{}
+
+	client := self.AnonymousClient()
+	_, err := client.PostData("/v1/apes/login", req, &resp)
+	return resp, err
+}
+
 type NetworkClient struct {
 	*http.Client
 	server *ApiServer
@@ -103,28 +147,28 @@ func (self *NetworkClient) fix_url(u string) string {
 	return u
 }
 
-func (self *NetworkClient) GetData(u string, response interface{}) error {
+func (self *NetworkClient) GetData(u string, response interface{}) (int, error) {
 	hresp, err := self.sendRequest("GET", u, nil)
 	if err == nil {
 		err = self.decodeResponse(hresp, response)
 	}
-	return err
+	return hresp.StatusCode, err
 }
 
-func (self *NetworkClient) PostData(u string, body interface{}, response interface{}) error {
+func (self *NetworkClient) PostData(u string, body interface{}, response interface{}) (int, error) {
 	hresp, err := self.sendRequest("POST", u, body)
 	if err == nil {
 		err = self.decodeResponse(hresp, response)
 	}
-	return err
+	return hresp.StatusCode, err
 }
 
-func (self *NetworkClient) PutData(u string, body interface{}, response interface{}) error {
+func (self *NetworkClient) PutData(u string, body interface{}, response interface{}) (int, error) {
 	hresp, err := self.sendRequest("PUT", u, body)
 	if err == nil {
 		err = self.decodeResponse(hresp, response)
 	}
-	return err
+	return hresp.StatusCode, err
 }
 
 func (self *NetworkClient) sendRequest(method, u string, body interface{}) (*http.Response, error) {
