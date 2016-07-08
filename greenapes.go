@@ -78,12 +78,12 @@ type SmsLoginSecondRequest struct {
 }
 
 type LoginResponse struct {
-	UserToken string `json:"user-token"`
-	Username  string
-	Timezone  string
-	Language  string
-	Profiles  []string
-	Created   bool
+	UserToken string   `json:"user-token"`
+	Username  string   `json:"username"`
+	Timezone  string   `json:"timezone"`
+	Language  string   `json:"language"`
+	Profiles  []string `json:"profiles"`
+	Created   bool     `json:"created"`
 }
 
 type ApiServer struct {
