@@ -66,6 +66,10 @@ type LoginRequest struct {
 	Language string `json:"language"`
 }
 
+type FBLoginRequest struct {
+	LoginRequest
+	FBToken string `json:"fbtoken"`
+}
 type SmsLoginFirstRequest struct {
 	LoginRequest
 	Telephone string `json:"telephone"`
@@ -114,6 +118,14 @@ func (self *ApiServer) Client(user_token string) *NetworkClient {
 
 func (self *ApiServer) AnonymousClient() *NetworkClient {
 	return self.Client("")
+}
+
+func (self *ApiServer) FBLogin(req FBLoginRequest) (LoginResponse, error) {
+	resp := LoginResponse{}
+
+	client := self.AnonymousClient()
+	_, err := client.PostData("/v1/apes/login", req, &resp)
+	return resp, err
 }
 
 func (self *ApiServer) SmsLoginStep1(req SmsLoginFirstRequest) error {
