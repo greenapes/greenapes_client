@@ -64,6 +64,7 @@ func ExtractStatusCode(e error) int {
 type LoginRequest struct {
 	Timezone string `json:"timezone"`
 	Language string `json:"language"`
+	ClientIp string
 }
 
 type FBLoginRequest struct {
@@ -124,7 +125,15 @@ func (self *ApiServer) FBLogin(req FBLoginRequest) (LoginResponse, error) {
 	resp := LoginResponse{}
 
 	client := self.AnonymousClient()
-	_, err := client.PostData("/v1/apes/login", req, &resp)
+
+	pending, err := client.prepareRequest("POST", "/v1/apes/login", req)
+	if err != nil {
+		return resp, err
+	}
+	if req.ClientIp != "" {
+		pending.Header.Set("X-Client-IP", req.ClientIp)
+	}
+	_, err = client.doRequest(pending, &resp)
 	return resp, err
 }
 
@@ -143,7 +152,15 @@ func (self *ApiServer) SmsLoginStep2(req SmsLoginSecondRequest) (LoginResponse, 
 	resp := LoginResponse{}
 
 	client := self.AnonymousClient()
-	_, err := client.PostData("/v1/apes/login", req, &resp)
+
+	pending, err := client.prepareRequest("POST", "/v1/apes/login", req)
+	if err != nil {
+		return resp, err
+	}
+	if req.ClientIp != "" {
+		pending.Header.Set("X-Client-IP", req.ClientIp)
+	}
+	_, err = client.doRequest(pending, &resp)
 	return resp, err
 }
 
@@ -160,30 +177,21 @@ func (self *NetworkClient) fix_url(u string) string {
 }
 
 func (self *NetworkClient) GetData(u string, response interface{}) (int, error) {
-	hresp, err := self.sendRequest("GET", u, nil)
-	if err == nil {
-		err = self.decodeResponse(hresp, response)
-	}
+	hresp, err := self.sendRequest("GET", u, nil, response)
 	return hresp.StatusCode, err
 }
 
 func (self *NetworkClient) PostData(u string, body interface{}, response interface{}) (int, error) {
-	hresp, err := self.sendRequest("POST", u, body)
-	if err == nil {
-		err = self.decodeResponse(hresp, response)
-	}
+	hresp, err := self.sendRequest("POST", u, body, response)
 	return hresp.StatusCode, err
 }
 
 func (self *NetworkClient) PutData(u string, body interface{}, response interface{}) (int, error) {
-	hresp, err := self.sendRequest("PUT", u, body)
-	if err == nil {
-		err = self.decodeResponse(hresp, response)
-	}
+	hresp, err := self.sendRequest("PUT", u, body, response)
 	return hresp.StatusCode, err
 }
 
-func (self *NetworkClient) sendRequest(method, u string, body interface{}) (*http.Response, error) {
+func (self *NetworkClient) prepareRequest(method, u string, body interface{}) (*http.Request, error) {
 	u = self.fix_url(u)
 	var payload io.Reader
 	if body != nil {
@@ -199,7 +207,28 @@ func (self *NetworkClient) sendRequest(method, u string, body interface{}) (*htt
 		return nil, err
 	}
 	req.Header.Set("content-type", "application/javascript")
-	return self.Do(req)
+	return req, nil
+}
+
+func (self *NetworkClient) doRequest(req *http.Request, response interface{}) (int, error) {
+	hresp, err := self.Do(req)
+	if err == nil {
+		err = self.decodeResponse(hresp, response)
+	}
+	return hresp.StatusCode, err
+}
+
+func (self *NetworkClient) sendRequest(method, u string, body interface{}, response interface{}) (*http.Response, error) {
+	req, err := self.prepareRequest(method, u, body)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := self.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	err = self.decodeResponse(resp, response)
+	return resp, err
 }
 
 func (self *NetworkClient) decodeResponse(resp *http.Response, decoded interface{}) error {
