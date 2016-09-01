@@ -71,6 +71,7 @@ type FBLoginRequest struct {
 	LoginRequest
 	FBToken string `json:"fbtoken"`
 }
+
 type SmsLoginFirstRequest struct {
 	LoginRequest
 	Telephone string `json:"telephone"`
@@ -142,6 +143,21 @@ func (self *ApiServer) SmsLoginStep1(req SmsLoginFirstRequest) error {
 
 	client := self.AnonymousClient()
 	code, err := client.PostData("/v1/apes/login", req, &resp)
+	if err == nil && code != 202 {
+		err = fmt.Errorf("invalid status code. received=%v expected=202", code)
+	}
+	return err
+}
+
+func (self *ApiServer) SmsLoginStep1Voice(req SmsLoginFirstRequest) error {
+	var resp interface{}
+	extended := struct {
+		SmsLoginFirstRequest
+		Call string `json:"call_me"`
+	}{req, ""}
+
+	client := self.AnonymousClient()
+	code, err := client.PostData("/v1/apes/login", extended, &resp)
 	if err == nil && code != 202 {
 		err = fmt.Errorf("invalid status code. received=%v expected=202", code)
 	}
