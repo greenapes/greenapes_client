@@ -192,6 +192,11 @@ func (self *NetworkClient) fix_url(u string) string {
 	return u
 }
 
+func (self *NetworkClient) HeadData(u string) (int, error) {
+	hresp, err := self.sendRequest("HEAD", u, nil, nil)
+	return hresp.StatusCode, err
+}
+
 func (self *NetworkClient) GetData(u string, response interface{}) (int, error) {
 	hresp, err := self.sendRequest("GET", u, nil, response)
 	return hresp.StatusCode, err
@@ -243,7 +248,11 @@ func (self *NetworkClient) sendRequest(method, u string, body interface{}, respo
 	if err != nil {
 		return nil, err
 	}
-	err = self.decodeResponse(resp, response)
+	if response != nil {
+		err = self.decodeResponse(resp, response)
+	} else {
+		resp.Body.Close()
+	}
 	return resp, err
 }
 
