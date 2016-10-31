@@ -212,6 +212,11 @@ func (self *NetworkClient) PutData(u string, body interface{}, response interfac
 	return hresp.StatusCode, err
 }
 
+func (self *NetworkClient) DeleteData(u string) (int, error) {
+	hresp, err := self.sendRequest("DELETE", u, nil, nil)
+	return hresp.StatusCode, err
+}
+
 func (self *NetworkClient) prepareRequest(method, u string, body interface{}) (*http.Request, error) {
 	u = self.fix_url(u)
 	var payload io.Reader
