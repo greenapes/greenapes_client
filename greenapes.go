@@ -256,6 +256,7 @@ func (self *NetworkClient) sendRequest(method, u string, body interface{}, respo
 	if response != nil {
 		err = self.decodeResponse(resp, response)
 	} else {
+		err = self.decodeError(resp)
 		resp.Body.Close()
 	}
 	return resp, err
