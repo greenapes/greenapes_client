@@ -62,9 +62,10 @@ func ExtractStatusCode(e error) int {
 }
 
 type LoginRequest struct {
-	Timezone string `json:"timezone"`
-	Language string `json:"language"`
-	ClientIp string
+	Timezone  string `json:"timezone"`
+	Language  string `json:"language"`
+	ClientIp  string
+	AcceptTou bool
 }
 
 type FBLoginRequest struct {
@@ -127,7 +128,12 @@ func (self *ApiServer) FBLogin(req FBLoginRequest) (LoginResponse, error) {
 
 	client := self.AnonymousClient()
 
-	pending, err := client.prepareRequest("POST", "/v1/apes/login", req)
+	path := "/v1/apes/login"
+	if req.AcceptTou {
+		path += "?tou="
+	}
+
+	pending, err := client.prepareRequest("POST", path, req)
 	if err != nil {
 		return resp, err
 	}
@@ -141,8 +147,13 @@ func (self *ApiServer) FBLogin(req FBLoginRequest) (LoginResponse, error) {
 func (self *ApiServer) SmsLoginStep1(req SmsLoginFirstRequest) error {
 	var resp interface{}
 
+	path := "/v1/apes/login"
+	if req.AcceptTou {
+		path += "?tou="
+	}
+
 	client := self.AnonymousClient()
-	code, err := client.PostData("/v1/apes/login", req, &resp)
+	code, err := client.PostData(path, req, &resp)
 	if err == nil && code != 202 {
 		err = fmt.Errorf("invalid status code. received=%v expected=202", code)
 	}
@@ -156,8 +167,13 @@ func (self *ApiServer) SmsLoginStep1Voice(req SmsLoginFirstRequest) error {
 		Call string `json:"call_me"`
 	}{req, ""}
 
+	path := "/v1/apes/login"
+	if req.AcceptTou {
+		path += "?tou="
+	}
+
 	client := self.AnonymousClient()
-	code, err := client.PostData("/v1/apes/login", extended, &resp)
+	code, err := client.PostData(path, extended, &resp)
 	if err == nil && code != 202 {
 		err = fmt.Errorf("invalid status code. received=%v expected=202", code)
 	}
@@ -167,9 +183,13 @@ func (self *ApiServer) SmsLoginStep1Voice(req SmsLoginFirstRequest) error {
 func (self *ApiServer) SmsLoginStep2(req SmsLoginSecondRequest) (LoginResponse, error) {
 	resp := LoginResponse{}
 
-	client := self.AnonymousClient()
+	path := "/v1/apes/login"
+	if req.AcceptTou {
+		path += "?tou="
+	}
 
-	pending, err := client.prepareRequest("POST", "/v1/apes/login", req)
+	client := self.AnonymousClient()
+	pending, err := client.prepareRequest("POST", path, req)
 	if err != nil {
 		return resp, err
 	}
