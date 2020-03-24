@@ -73,6 +73,11 @@ type FBLoginRequest struct {
 	FBToken string `json:"fbtoken"`
 }
 
+type AppleLoginRequest struct {
+	LoginRequest
+	AppleToken string `json:"appletoken"`
+}
+
 type SmsLoginFirstRequest struct {
 	LoginRequest
 	Telephone string `json:"telephone"`
@@ -124,6 +129,32 @@ func (self *ApiServer) AnonymousClient() *NetworkClient {
 }
 
 func (self *ApiServer) FBLogin(req FBLoginRequest) (LoginResponse, error) {
+	resp := LoginResponse{}
+
+	client := self.AnonymousClient()
+
+	path := "/v1/apes/login"
+	if req.AcceptTou {
+		path += "?tou="
+	}
+
+	pending, err := client.prepareRequest("POST", path, req)
+	if err != nil {
+		return resp, err
+	}
+	if req.ClientIp != "" {
+		pending.Header.Set("X-Client-IP", req.ClientIp)
+	}
+	_, err = client.doRequest(pending, &resp)
+	return resp, err
+}
+
+func (self *ApiServer) Test(req FBLoginRequest) (LoginResponse, error) {
+	resp := LoginResponse{}
+	return resp, nil
+}
+
+func (self *ApiServer) AppleLogin(req AppleLoginRequest) (LoginResponse, error) {
 	resp := LoginResponse{}
 
 	client := self.AnonymousClient()
