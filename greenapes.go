@@ -75,7 +75,8 @@ type FBLoginRequest struct {
 
 type AppleLoginRequest struct {
 	LoginRequest
-	AppleToken string `json:"appletoken"`
+	AppleToken   string `json:"appletoken"`
+	AppleIdToken string `json:"appleidtoken"`
 }
 
 type SmsLoginFirstRequest struct {
@@ -147,11 +148,6 @@ func (self *ApiServer) FBLogin(req FBLoginRequest) (LoginResponse, error) {
 	}
 	_, err = client.doRequest(pending, &resp)
 	return resp, err
-}
-
-func (self *ApiServer) Test(req FBLoginRequest) (LoginResponse, error) {
-	resp := LoginResponse{}
-	return resp, nil
 }
 
 func (self *ApiServer) AppleLogin(req AppleLoginRequest) (LoginResponse, error) {
