@@ -92,6 +92,7 @@ type SmsLoginSecondRequest struct {
 
 type LoginResponse struct {
 	UserToken string   `json:"user-token"`
+	Email     string   `json:"email"`
 	Username  string   `json:"username"`
 	Timezone  string   `json:"timezone"`
 	Language  string   `json:"language"`
