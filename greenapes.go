@@ -86,7 +86,9 @@ type GoogleLoginRequest struct {
 
 type SmsLoginFirstRequest struct {
 	LoginRequest
-	Telephone string `json:"telephone"`
+	Telephone       string `json:"telephone"`
+	RecaptchaToken  string `json:"recaptchaToken"`
+	BypassRecaptcha string `json:"bypassRecaptcha"`
 }
 
 type SmsLoginSecondRequest struct {
