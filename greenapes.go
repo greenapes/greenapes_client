@@ -374,21 +374,28 @@ func (self *NetworkClient) decodeError(resp *http.Response) error {
 		Error map[string]interface{}
 	}
 
+	fmt.Println("-1")
 	err = json.Unmarshal(bytes, &raw)
 	if err != nil {
 		return out
 	}
 
 	if raw.Error != nil {
+		fmt.Println("0")
 		d, ok := raw.Error["description"]
 		if ok {
 			out.Description = d.(string)
 			delete(raw.Error, "description")
 		}
-		d, ok = raw.Error["nickname"]
+		fmt.Println("1")
+		d, ok := raw.Error["nickname"]
 		if ok {
-			out.Description = d.(string)
+			fmt.Println("2")
+			out.Description = d.([]string)[0].(string)
+			fmt.Println("3")
+			fmt.Println(out.Description)
 			delete(raw.Error, "nickname")
+			fmt.Println("4")
 		}
 		out.Details = raw.Error
 	}
