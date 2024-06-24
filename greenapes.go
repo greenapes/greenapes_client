@@ -388,7 +388,7 @@ func (self *NetworkClient) decodeError(resp *http.Response) error {
 			delete(raw.Error, "description")
 		}
 		fmt.Println("1")
-		d, ok := raw.Error["nickname"]
+		d, ok = raw.Error["nickname"]
 		if ok {
 			fmt.Println("2")
 			out.Description = d.([]string)[0].(string)
