@@ -385,7 +385,7 @@ func (self *NetworkClient) decodeError(resp *http.Response) error {
 			out.Description = d.(string)
 			delete(raw.Error, "description")
 		}
-		d, ok := raw.Error["nickname"]
+		d, ok = raw.Error["nickname"]
 		if ok {
 			out.Description = d.(string)
 			delete(raw.Error, "nickname")
