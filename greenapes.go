@@ -52,12 +52,8 @@ func (self *Error) Error() string {
 	return fmt.Sprintf("Greenapes error[code=%s desc=%s]", code, self.Description)
 }
 
-func (self *Error) JsonError() any {
-	jData, err := json.Marshal(self)
-	if err != nil {
-		// handle error
-	}
-	return jData
+func (self *Error) JsonError() ([]byte, error) {
+	return json.Marshal(self)
 }
 
 func ExtractStatusCode(e error) int {
