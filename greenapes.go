@@ -88,6 +88,11 @@ type GoogleLoginRequest struct {
 	GoogleToken string `json:"googletoken"`
 }
 
+type SecretTokenLoginRequest struct {
+	LoginRequest
+	SecretToken string `json:"secret_token"`
+}
+
 type SmsLoginFirstRequest struct {
 	LoginRequest
 	Telephone       string `json:"telephone"`
@@ -184,6 +189,27 @@ func (self *ApiServer) AppleLogin(req AppleLoginRequest) (LoginResponse, error) 
 }
 
 func (self *ApiServer) GoogleLogin(req GoogleLoginRequest) (LoginResponse, error) {
+	resp := LoginResponse{}
+
+	client := self.AnonymousClient()
+
+	path := "/v1/apes/login"
+	if req.AcceptTou {
+		path += "?tou="
+	}
+
+	pending, err := client.prepareRequest("POST", path, req)
+	if err != nil {
+		return resp, err
+	}
+	if req.ClientIp != "" {
+		pending.Header.Set("X-Client-IP", req.ClientIp)
+	}
+	_, err = client.doRequest(pending, &resp)
+	return resp, err
+}
+
+func (self *ApiServer) SecretTokenLogin(req SecretTokenLoginRequest) (LoginResponse, error) {
 	resp := LoginResponse{}
 
 	client := self.AnonymousClient()
